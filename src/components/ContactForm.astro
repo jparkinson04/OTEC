@@ -1,0 +1,104 @@
+---
+// Markup + styling only. Submission is wired up in prompts/04-contact-form.md.
+---
+
+<form class="form" method="post" action="#" data-contact-form>
+  <div class="form__row">
+    <div class="field">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" autocomplete="name" required />
+    </div>
+    <div class="field">
+      <label for="company">Company <span class="optional">(optional)</span></label>
+      <input id="company" name="company" type="text" autocomplete="organization" />
+    </div>
+  </div>
+  <div class="form__row">
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required />
+    </div>
+    <div class="field">
+      <label for="phone">Phone <span class="optional">(optional)</span></label>
+      <input id="phone" name="phone" type="tel" autocomplete="tel" />
+    </div>
+  </div>
+  <div class="field">
+    <label for="message">Tell us about your project</label>
+    <textarea id="message" name="message" rows="6" required></textarea>
+  </div>
+
+  <!-- Honeypot: hidden from people, tempting for bots. Reject if filled. -->
+  <div class="sr-only" aria-hidden="true">
+    <label for="website">Leave this field empty</label>
+    <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <div class="form__footer">
+    <button class="btn btn--primary" type="submit">Send message</button>
+    <p class="form__status muted" role="status" aria-live="polite" data-form-status></p>
+  </div>
+</form>
+
+<style>
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .form__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  label {
+    font-size: var(--fs-small);
+    font-weight: 500;
+  }
+  .optional {
+    font-weight: 400;
+    color: var(--text-dim);
+  }
+  input,
+  textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--text);
+    font: inherit;
+    transition: border-color var(--dur) var(--ease);
+  }
+  input {
+    min-height: 3.25rem;
+  }
+  textarea {
+    resize: vertical;
+  }
+  input:hover,
+  textarea:hover,
+  input:focus,
+  textarea:focus {
+    border-color: var(--blue);
+  }
+  .form__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+  }
+  .form__status {
+    font-size: var(--fs-small);
+  }
+  @media (max-width: 640px) {
+    .form__row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

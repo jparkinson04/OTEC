@@ -1,0 +1,15 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHeader from '@/components/PageHeader.astro';
+---
+
+<BaseLayout title="Page not found">
+  <PageHeader label="Error 404" title="That page has tripped out.">
+    The page you were after does not exist or has moved.
+  </PageHeader>
+  <section class="section">
+    <div class="container">
+      <a class="btn btn--primary" href="/">Back to home</a>
+    </div>
+  </section>
+</BaseLayout>

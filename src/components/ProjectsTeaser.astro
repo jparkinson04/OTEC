@@ -1,0 +1,47 @@
+---
+import { getCollection } from 'astro:content';
+import SectionHeading from '@/components/SectionHeading.astro';
+import ProjectCard from '@/components/ProjectCard.astro';
+import Icon from '@/components/Icon.astro';
+
+const all = await getCollection('projects', ({ data }) => !data.draft);
+const featured = all
+  .filter((p) => p.data.featured)
+  .sort((a, b) => (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0))
+  .slice(0, 3);
+---
+
+<section class="section" aria-labelledby="projects-h">
+  <div class="container teaser">
+    <SectionHeading label="Projects" title="Our work, across the UK." id="projects-h">
+      <a class="link-arrow" href="/projects/">Explore the project map <Icon name="arrow" size={18} strokeWidth={2} /></a>
+    </SectionHeading>
+    <ul class="teaser__grid" role="list">
+      {featured.map((project) => <li><ProjectCard project={project} /></li>)}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .teaser {
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+  .teaser__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin: 0;
+  }
+  @media (max-width: 1000px) {
+    .teaser__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .teaser__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

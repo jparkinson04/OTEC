@@ -1,0 +1,81 @@
+---
+// The OTEC brand motif: circuit traces lifted from the logo.
+// variant "hero"  = large field that runs in from the right edge
+// variant "left"  = small bracket entering from the left edge
+// variant "right" = small bracket entering from the right edge
+interface Props {
+  variant?: 'hero' | 'left' | 'right';
+  class?: string;
+}
+
+const { variant = 'hero', class: className } = Astro.props;
+
+// [path, node x, node y, bright?]
+type Trace = [string, number, number, boolean];
+
+const hero: Trace[] = [
+  ['M760 120 H560 L520 80 H360', 360, 80, false],
+  ['M760 170 H500 L460 130 H240', 240, 130, true],
+  ['M760 220 H620 L580 260 H420', 420, 260, false],
+  ['M760 300 H340 L300 340 H160', 160, 340, true],
+  ['M760 380 H540 L500 420 H330', 330, 420, false],
+  ['M760 460 H450 L410 500 H220', 220, 500, true],
+  ['M760 540 H600 L560 580 H470', 470, 580, false],
+  ['M760 620 H380', 380, 620, false],
+];
+
+const left: Trace[] = [
+  ['M0 40 H150 L180 70 H250', 250, 70, true],
+  ['M0 120 H110 L140 90 H200', 200, 90, false],
+];
+
+const right: Trace[] = [
+  ['M300 120 H150 L120 90 H50', 50, 90, true],
+  ['M300 40 H190 L160 70 H100', 100, 70, false],
+];
+
+const sets = { hero, left, right };
+const traces = sets[variant];
+const viewBox = variant === 'hero' ? '0 0 760 700' : '0 0 300 160';
+const big = variant === 'hero';
+---
+
+<svg
+  class:list={['traces', `traces--${variant}`, className]}
+  aria-hidden="true"
+  viewBox={viewBox}
+  fill="none"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  preserveAspectRatio={variant === 'left' ? 'xMinYMid meet' : 'xMaxYMid meet'}
+>
+  {
+    traces.map(([d, cx, cy, bright]) =>
+      bright ? (
+        <g class="trace trace--bright">
+          <path d={d} stroke-width="3" />
+          <circle cx={cx} cy={cy} r={big ? 10 : 9} class="node-fill" />
+        </g>
+      ) : (
+        <g class="trace trace--dim">
+          <path d={d} stroke-width="1.5" />
+          <circle cx={cx} cy={cy} r={big ? 7 : 6} stroke-width="1.5" />
+        </g>
+      ),
+    )
+  }
+</svg>
+
+<style>
+  .traces {
+    stroke: var(--blue);
+    pointer-events: none;
+  }
+  .trace--dim {
+    opacity: 0.4;
+  }
+  .node-fill {
+    fill: var(--blue);
+    stroke: none;
+  }
+</style>

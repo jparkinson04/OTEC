@@ -1,0 +1,49 @@
+---
+import Icon from '@/components/Icon.astro';
+import type { Service } from '@/data/services';
+
+interface Props {
+  service: Service;
+  index: number;
+}
+const { service, index } = Astro.props;
+const number = String(index + 1).padStart(2, '0');
+---
+
+<article class="card">
+  <div class="card__top">
+    <span class="card__icon"><Icon name={service.icon} /></span>
+    <span class="label label--dim" aria-hidden="true">{number}</span>
+  </div>
+  <h3 class="display h3">{service.title}</h3>
+  <p class="muted">{service.summary}</p>
+</article>
+
+<style>
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    height: 100%;
+    padding: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--line-card);
+    border-radius: var(--radius-card);
+    transition: border-color var(--dur) var(--ease);
+  }
+  .card:hover {
+    border-color: var(--blue);
+  }
+  .card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card__icon {
+    color: var(--blue);
+  }
+  .card p {
+    font-size: var(--fs-small);
+    line-height: 1.6;
+  }
+</style>

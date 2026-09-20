@@ -1,0 +1,36 @@
+---
+// Top-of-page band for inner pages (Projects, Contact). Shares the hero's grid texture.
+interface Props {
+  label: string;
+  title: string;
+}
+const { label, title } = Astro.props;
+---
+
+<section class="page-header">
+  <div class="container page-header__inner">
+    <span class="label">{label}</span>
+    <h1 class="display h2-lg">{title}</h1>
+    {Astro.slots.has('default') && <p class="muted"><slot /></p>}
+  </div>
+</section>
+
+<style>
+  .page-header {
+    padding-block: clamp(3.5rem, 8vw, 6rem);
+    border-bottom: 1px solid var(--line);
+    background-image:
+      linear-gradient(var(--blue-faint) 1px, transparent 1px),
+      linear-gradient(90deg, var(--blue-faint) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .page-header__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .page-header p {
+    max-width: 38rem;
+    font-size: var(--fs-lead);
+  }
+</style>

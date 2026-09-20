@@ -1,0 +1,56 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+const { project } = Astro.props;
+const { title, location, sector, cover } = project.data;
+---
+
+<a class="project" href={`/projects/${project.id}/`}>
+  {
+    cover ? (
+      <Image
+        class="project__media"
+        src={cover}
+        alt=""
+        widths={[480, 800, 1200]}
+        sizes="(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 33vw"
+      />
+    ) : (
+      <div class="project__media placeholder">[Project photo]</div>
+    )
+  }
+  <div class="project__meta">
+    <span class="label label--dim">{sector} / {location}</span>
+    <span class="display h3">{title}</span>
+  </div>
+</a>
+
+<style>
+  .project {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .project__media {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+  .project__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .project .h3 {
+    transition: color var(--dur) var(--ease);
+  }
+  .project:hover .h3 {
+    color: var(--blue);
+  }
+</style>

@@ -1,0 +1,144 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CtaBand from '@/components/CtaBand.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', ({ data }) => !data.draft);
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props;
+const { title, location, sector, services, summary, cover, gallery } = project.data;
+const { Content } = await render(project);
+---
+
+<BaseLayout title={title} description={summary}>
+  <article>
+    <header class="profile-header">
+      <div class="container profile-header__inner">
+        <a class="back" href="/projects/">&larr; All projects</a>
+        <span class="label">{sector} / {location}</span>
+        <h1 class="display h2-lg">{title}</h1>
+        <p class="muted lead">{summary}</p>
+      </div>
+    </header>
+
+    <div class="container profile">
+      {
+        cover ? (
+          <Image class="profile__cover" src={cover} alt="" widths={[800, 1280, 1920]} sizes="100vw" />
+        ) : (
+          <div class="profile__cover placeholder">[Cover photo]</div>
+        )
+      }
+
+      <div class="profile__body">
+        <div class="prose"><Content /></div>
+        {
+          services.length > 0 && (
+            <aside class="profile__aside">
+              <h2 class="label label--dim">Services delivered</h2>
+              <ul role="list">{services.map((s) => <li>{s}</li>)}</ul>
+            </aside>
+          )
+        }
+      </div>
+
+      {
+        gallery.length > 0 && (
+          <ul class="profile__gallery" role="list">
+            {gallery.map((photo) => (
+              <li>
+                <Image src={photo} alt="" widths={[480, 800, 1200]} sizes="(max-width: 640px) 100vw, 50vw" />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+  </article>
+
+  <CtaBand />
+</BaseLayout>
+
+<style>
+  .profile-header {
+    padding-block: clamp(3rem, 7vw, 5rem);
+    border-bottom: 1px solid var(--line);
+  }
+  .profile-header__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+  }
+  .lead {
+    max-width: 42rem;
+    font-size: var(--fs-lead);
+  }
+  .profile {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+    padding-block: var(--section-y);
+  }
+  .profile__cover {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+  .profile__body {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 3rem 6rem;
+  }
+  .prose {
+    max-width: 44rem;
+    color: var(--text-muted);
+  }
+  .prose :global(p + p) {
+    margin-top: 1.25em;
+  }
+  .profile__aside h2 {
+    margin-bottom: 1rem;
+  }
+  .profile__aside li {
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--line);
+    font-size: var(--fs-small);
+  }
+  .profile__gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin: 0;
+  }
+  .profile__gallery img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+  }
+  @media (max-width: 800px) {
+    .profile__body {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .profile__gallery {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

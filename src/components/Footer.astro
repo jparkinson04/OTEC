@@ -1,0 +1,109 @@
+---
+import { site } from '@/data/site';
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <img src="/images/otec-logo.png" alt="OTEC" width="251" height="141" loading="lazy" />
+        <p class="muted">
+          Innovation in electrical engineering. Working UK wide on industrial, commercial and
+          domestic projects.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="label label--dim">Navigate</h2>
+        <ul role="list">
+          {site.nav.map((item) => <li><a href={item.href}>{item.label}</a></li>)}
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="label label--dim">Services</h2>
+        <ul role="list" class="muted">
+          <li>Installation and maintenance</li>
+          <li>Fire and security</li>
+          <li>Lighting and networks</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 class="label label--dim">Contact</h2>
+        <ul role="list">
+          <li>{site.phoneHref ? <a href={site.phoneHref}>{site.phone}</a> : site.phone}</li>
+          <li>{site.emailHref ? <a href={site.emailHref}>{site.email}</a> : site.email}</li>
+          <li class="muted">{site.address}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer__bar">
+      <span>&copy; {year} {site.legalName}. All rights reserved.</span>
+      <span>
+        Website by <a href="https://seamdigitalstudio.com" rel="noopener">Seam Digital Studio</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    padding-top: 4.5rem;
+    font-size: var(--fs-small);
+  }
+  .footer__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1.4fr;
+    gap: 3rem;
+    padding-bottom: 3.5rem;
+  }
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+  .footer__brand img {
+    height: 3.5rem;
+    width: auto;
+  }
+  .footer__brand p {
+    max-width: 19rem;
+  }
+  .footer h2 {
+    margin-bottom: 0.875rem;
+  }
+  .footer li {
+    display: flex;
+    align-items: center;
+    min-height: 2.25rem;
+  }
+  .footer__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    padding-block: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-size: var(--fs-label);
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 900px) {
+    .footer__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .footer__brand {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 520px) {
+    .footer__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,18 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# environment (secrets, see .env.example once brief 04 adds it)
+.env
+.env.*
+!.env.example
+
+# hosting
+.vercel/
+
+# OS / editor
+.DS_Store
+*.log

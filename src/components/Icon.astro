@@ -1,0 +1,48 @@
+---
+// Inline stroke icons. Add new ones to `paths` and to IconName in src/data/services.ts.
+import type { IconName } from '@/data/services';
+
+interface Props {
+  name: IconName;
+  size?: number;
+  strokeWidth?: number;
+}
+
+const { name, size = 28, strokeWidth = 1.6 } = Astro.props;
+
+const paths: Record<IconName, string[]> = {
+  bolt: ['M13 2 4 14h7l-1 8 9-12h-7z'],
+  wrench: [
+    'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+  ],
+  bell: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
+  camera: ['M2 7h13v10H2z', 'M15 10l6-3v10l-6-3'],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  bulb: [
+    'M9 18h6',
+    'M10 22h4',
+    'M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14',
+  ],
+  network: ['M9 2h6v6H9z', 'M3 16h6v6H3z', 'M15 16h6v6h-6z', 'M12 8v4', 'M6 16v-4h12v4'],
+  sun: [
+    'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+    'M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41',
+  ],
+  lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+  arrow: ['M5 12h14', 'M13 6l6 6-6 6'],
+};
+---
+
+<svg
+  aria-hidden="true"
+  viewBox="0 0 24 24"
+  width={size}
+  height={size}
+  fill="none"
+  stroke="currentColor"
+  stroke-width={strokeWidth}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  {paths[name].map((d) => <path d={d} />)}
+</svg>

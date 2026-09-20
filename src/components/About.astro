@@ -1,0 +1,132 @@
+---
+const steps = [
+  { title: 'Design', text: 'Systems planned around your exact requirements.' },
+  { title: 'Installation', text: 'Domestic, commercial and industrial installs.' },
+  { title: 'Commissioning', text: 'Inspection, testing and certification.' },
+  { title: 'Maintenance', text: 'Preventative schemes that keep premises safe.' },
+];
+---
+
+<section class="section about" aria-labelledby="about-h">
+  <div class="container about__inner">
+    <div class="about__top">
+      <div class="about__heading">
+        <span class="label">About OTEC</span>
+        <h2 id="about-h" class="display h2">From first design to long-term maintenance.</h2>
+      </div>
+      <p class="muted">
+        OTEC is an electrical engineering company working UK wide in the public and private
+        sectors. Our expertise in all areas of electrical engineering and project management
+        ensures a high quality, value for money service for every customer.
+      </p>
+    </div>
+
+    <ol class="process" role="list">
+      {
+        steps.map((step) => (
+          <li class="process__step">
+            <div class="process__rail" aria-hidden="true">
+              <span class="process__node" />
+              <span class="process__line" />
+            </div>
+            <h3 class="display h3">{step.title}</h3>
+            <p class="muted">{step.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .about__inner {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3rem, 6vw, 5rem);
+  }
+  .about__top {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 6rem;
+    align-items: end;
+  }
+  .about__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .process {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .process__step {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-right: 2rem;
+  }
+  .process__rail {
+    display: flex;
+    align-items: center;
+    margin: 0 -2rem 1rem 0;
+  }
+  .process__node {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+  .process__line {
+    flex-grow: 1;
+    height: 2px;
+    background: var(--blue);
+  }
+  .process__step:last-child {
+    padding-right: 0;
+  }
+  .process__step:last-child .process__rail {
+    margin-right: 0;
+  }
+  .process__step:last-child .process__line {
+    background: var(--line-strong);
+  }
+  .process__step p {
+    font-size: var(--fs-small);
+  }
+
+  @media (max-width: 900px) {
+    .about__top {
+      grid-template-columns: 1fr;
+    }
+    /* Rail turns vertical: node on the left, line running down to the next step. */
+    .process {
+      grid-template-columns: 1fr;
+    }
+    .process__step {
+      position: relative;
+      padding: 0 0 2.25rem 2.5rem;
+    }
+    .process__rail {
+      position: absolute;
+      inset: 0.25rem auto 0 0;
+      flex-direction: column;
+      width: 16px;
+      margin: 0;
+    }
+    .process__line {
+      width: 2px;
+      height: auto;
+    }
+    .process__step:last-child {
+      padding-bottom: 0;
+    }
+    .process__step:last-child .process__line {
+      display: none;
+    }
+  }
+</style>

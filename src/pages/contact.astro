@@ -1,0 +1,72 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PageHeader from '@/components/PageHeader.astro';
+import ContactForm from '@/components/ContactForm.astro';
+import { site } from '@/data/site';
+---
+
+<BaseLayout
+  title="Contact"
+  description="Get in touch with OTEC about your electrical engineering project."
+>
+  <PageHeader label="Contact" title="Got a project in mind?">
+    Tell us what you need and we will work with you to design a system to your exact requirements.
+  </PageHeader>
+
+  <section class="section">
+    <div class="container contact">
+      <ContactForm />
+
+      <aside class="details">
+        <div>
+          <h2 class="label label--dim">Phone</h2>
+          <p>{site.phoneHref ? <a href={site.phoneHref}>{site.phone}</a> : site.phone}</p>
+        </div>
+        <div>
+          <h2 class="label label--dim">Email</h2>
+          <p>{site.emailHref ? <a href={site.emailHref}>{site.email}</a> : site.email}</p>
+        </div>
+        <div>
+          <h2 class="label label--dim">Address</h2>
+          <p class="muted">{site.address}</p>
+        </div>
+        <div>
+          <h2 class="label label--dim">Coverage</h2>
+          <p class="muted">UK wide, public and private sector.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 4rem 6rem;
+    align-items: start;
+  }
+  .details {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 2rem;
+    background: var(--surface);
+    border: 1px solid var(--line-card);
+    border-radius: var(--radius-card);
+  }
+  .details > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-block: 1.5rem;
+    border-top: 1px solid var(--line-card);
+  }
+  .details > div:first-child {
+    border-top: 0;
+  }
+  @media (max-width: 900px) {
+    .contact {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

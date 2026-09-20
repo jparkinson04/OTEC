@@ -1,0 +1,39 @@
+---
+// Mono label + display heading, with an optional right-hand slot (intro copy or a link).
+interface Props {
+  label: string;
+  title: string;
+  id?: string;
+  as?: 'h1' | 'h2';
+}
+const { label, title, id, as: Tag = 'h2' } = Astro.props;
+---
+
+<div class="heading">
+  <div class="heading__main">
+    <span class="label">{label}</span>
+    <Tag id={id} class="display h2">{title}</Tag>
+  </div>
+  {Astro.slots.has('default') && <div class="heading__aside"><slot /></div>}
+</div>
+
+<style>
+  .heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem 6rem;
+    flex-wrap: wrap;
+  }
+  .heading__main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 44rem;
+  }
+  .heading__aside {
+    max-width: 25rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+  }
+</style>

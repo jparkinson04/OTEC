@@ -1,0 +1,75 @@
+---
+import CircuitTraces from '@/components/CircuitTraces.astro';
+import { site } from '@/data/site';
+---
+
+<section class="cta" aria-labelledby="cta-h">
+  <CircuitTraces variant="left" class="cta__traces" />
+  <div class="cta__body">
+    <h2 id="cta-h" class="display h2-lg">Got a project in mind?</h2>
+    <p class="muted">
+      Tell us what you need and we will work with you to design a system to your exact
+      requirements.
+    </p>
+    <div class="cta__actions">
+      <a class="btn btn--primary" href="/contact/">Contact us</a>
+      {
+        site.phoneHref ? (
+          <a class="btn btn--ghost cta__phone" href={site.phoneHref}>{site.phone}</a>
+        ) : (
+          <span class="btn btn--ghost cta__phone">{site.phone}</span>
+        )
+      }
+    </div>
+  </div>
+  <CircuitTraces variant="right" class="cta__traces" />
+</section>
+
+<style>
+  .cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3rem;
+    padding-block: var(--section-y);
+    background: var(--bg-alt);
+    border-block: 1px solid var(--line);
+  }
+  .cta :global(.cta__traces) {
+    flex: 0 1 300px;
+    min-width: 0;
+    height: 160px;
+  }
+  .cta__body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  .cta__body p {
+    max-width: 32.5rem;
+  }
+  .cta__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
+  .cta__phone {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: var(--fs-small);
+  }
+
+  @media (max-width: 900px) {
+    .cta {
+      padding-inline: var(--gutter);
+      justify-content: center;
+    }
+    .cta :global(.cta__traces) {
+      display: none;
+    }
+  }
+</style>

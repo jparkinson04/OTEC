@@ -1,0 +1,162 @@
+---
+import { site } from '@/data/site';
+
+const path = Astro.url.pathname;
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+
+<header class="header">
+  <div class="container header__inner">
+    <a class="header__logo" href="/" aria-label="OTEC home">
+      <img src="/images/otec-logo.png" alt="OTEC" width="251" height="141" />
+    </a>
+
+    <button class="header__toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="sr-only">Menu</span>
+      <span class="header__bars" aria-hidden="true"></span>
+    </button>
+
+    <nav id="site-nav" class="header__nav" aria-label="Main">
+      <ul role="list">
+        {
+          site.nav.map((item) => (
+            <li>
+              <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <a class="btn btn--outline" href="/contact/">Get in touch</a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.header__toggle');
+  const nav = document.querySelector<HTMLElement>('.header__nav');
+  toggle?.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!open));
+    nav?.classList.toggle('is-open', !open);
+  });
+</script>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: var(--header-h);
+  }
+  .header__logo img {
+    height: 3rem;
+    width: auto;
+  }
+  .header__nav {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+  }
+  .header__nav ul {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    margin: 0;
+  }
+  .header__nav li a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    font-size: var(--fs-small);
+    font-weight: 500;
+  }
+  .header__nav li a[aria-current='page'] {
+    color: var(--blue);
+  }
+  .header__toggle {
+    display: none;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .header__bars,
+  .header__bars::before,
+  .header__bars::after {
+    display: block;
+    width: 1.125rem;
+    height: 2px;
+    margin-inline: auto;
+    background: currentColor;
+    transition: transform var(--dur) var(--ease);
+  }
+  .header__bars {
+    position: relative;
+  }
+  .header__bars::before,
+  .header__bars::after {
+    content: '';
+    position: absolute;
+    left: 0;
+  }
+  .header__bars::before {
+    top: -6px;
+  }
+  .header__bars::after {
+    top: 6px;
+  }
+  .header__toggle[aria-expanded='true'] .header__bars {
+    background: transparent;
+  }
+  .header__toggle[aria-expanded='true'] .header__bars::before {
+    transform: translateY(6px) rotate(45deg);
+  }
+  .header__toggle[aria-expanded='true'] .header__bars::after {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  @media (max-width: 760px) {
+    .header__toggle {
+      display: block;
+    }
+    .header__nav {
+      display: none;
+      position: absolute;
+      inset: 100% 0 auto 0;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1.5rem;
+      padding: 1.5rem var(--gutter) 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+    .header__nav.is-open {
+      display: flex;
+    }
+    .header__nav ul {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+    }
+    .header__nav li a {
+      width: 100%;
+      min-height: 3.25rem;
+      font-size: 1.125rem;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+</style>
