@@ -8,7 +8,7 @@
   --blue: #33b8e5;
   --blue-hover: #5cc8ec;
   --blue-ink: #04121a; /* text on top of --blue */
-  --blue-faint: rgba(51, 184, 229, 0.055); /* hero grid lines */
+  --blue-glow: rgba(51, 184, 229, 0.16); /* the ambient glow, see .ambient below */
 
   /* Grounds (blue-tinted near-blacks) */
   --bg: #080d12;
@@ -127,19 +127,22 @@ a:hover {
 }
 
 /* ---------- Typography helpers ---------- */
+/* All headings and titles are set in capitals (client request, September 2026). Source text
+   stays sentence case so screen readers get words, not spelled-out letters. */
 .display {
   font-family: var(--font-display);
   font-stretch: 125%;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.005em;
   line-height: 1.1;
+  text-transform: uppercase;
   color: var(--text-strong);
 }
 
 .h1 {
   font-size: var(--fs-h1);
   line-height: 1.02;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 .h2 {
   font-size: var(--fs-h2);
@@ -168,6 +171,19 @@ a:hover {
 
 .muted {
   color: var(--text-muted);
+}
+
+/* ---------- Ambient glow ----------
+   The one permitted soft light: brand blue at low alpha breathing out of the ground.
+   Replaces the old blueprint grid on the hero, page headers and the map panel.
+   --glow-at moves the source (default top right, where the hero traces come from). */
+.ambient {
+  background-color: var(--bg);
+  background-image: radial-gradient(
+    ellipse 80% 75% at var(--glow-at, 85% 20%),
+    var(--blue-glow),
+    transparent 78%
+  );
 }
 
 /* ---------- Layout helpers ---------- */

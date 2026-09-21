@@ -1,0 +1,128 @@
+---
+// Performance stats: label, percentage and a hairline track that fills to the value,
+// ending in a node like the circuit traces. Fills and counts up once, when scrolled into view.
+// With reduced motion (or no JS) the final state is shown straight away.
+import { stats } from '@/data/stats';
+---
+
+<ul class="stats" role="list" data-stats>
+  {
+    stats.map((stat, i) => (
+      <li class="stat" style={`--pct: ${stat.value}; --i: ${i};`}>
+        <span class="label label--dim">{stat.label}</span>
+        <span class="stat__value display">
+          <span data-num={stat.value}>{stat.value}</span>%
+        </span>
+        <span class="stat__track" aria-hidden="true">
+          <span class="stat__fill" />
+          <span class="stat__node" />
+        </span>
+      </li>
+    ))
+  }
+</ul>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-stats]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (root && !reduce && 'IntersectionObserver' in window) {
+    const nums = [...root.querySelectorAll<HTMLElement>('[data-num]')];
+    nums.forEach((n) => (n.textContent = '0'));
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        root.classList.add('is-visible');
+
+        nums.forEach((n, i) => {
+          const target = Number(n.dataset.num);
+          const start = performance.now() + i * 80;
+          const duration = 900;
+          const tick = (now: number) => {
+            const t = Math.min(1, Math.max(0, (now - start) / duration));
+            const eased = 1 - Math.pow(1 - t, 3);
+            n.textContent = String(Math.round(target * eased));
+            if (t < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      },
+      { threshold: 0.4 },
+    );
+    io.observe(root);
+  } else {
+    root?.classList.add('is-visible');
+  }
+</script>
+
+<style>
+  .stats {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+  .stat {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 0.75rem 1rem;
+    padding-block: 1.125rem;
+    border-top: 1px solid var(--line);
+  }
+  .stat:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .stat__value {
+    font-size: 1.5rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat__track {
+    position: relative;
+    grid-column: 1 / -1;
+    height: 2px;
+    background: var(--line-card);
+  }
+  .stat__fill,
+  .stat__node {
+    position: absolute;
+    transition:
+      transform 900ms var(--ease) calc(var(--i) * 80ms),
+      opacity 300ms var(--ease) calc(var(--i) * 80ms + 600ms);
+  }
+  .stat__fill {
+    inset: 0;
+    background: var(--blue);
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+  /* Full-width carrier slid left so its right edge (the node) lands at the value. */
+  .stat__node {
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    margin-top: -4px;
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  .stat__node::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+  .is-visible .stat__fill {
+    transform: scaleX(calc(var(--pct) / 100));
+  }
+  .is-visible .stat__node {
+    opacity: 1;
+    transform: translateX(calc(var(--pct) * 1% - 100%));
+  }
+</style>

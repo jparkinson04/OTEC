@@ -12,11 +12,15 @@ OTEC's logo is a set of circuit traces ending in round nodes. The site turns tha
 visual language instead of relying on stock imagery (the old site's lightning photo):
 
 - **Hero:** eight traces run in from the right edge, three bright (3px, filled nodes) and
-  five dim (1.5px, 40% opacity, ring nodes), over a faint 48px blueprint grid.
+  five dim (1.5px, 40% opacity, ring nodes), over the ambient glow (`.ambient`), a soft
+  brand-blue light rising from the top right. The glow replaced the original 48px blueprint
+  grid at the client's request (September 2026) and is also used on page headers and the map panel.
 - **About:** the Design, Installation, Commissioning, Maintenance process is drawn as one trace
   with four nodes. The last segment is grey: maintenance is ongoing. On mobile the rail turns vertical.
 - **Contact band:** small trace brackets enter from each side and point at the call to action.
-- **Favicon:** a single trace and node.
+- **Favicon:** the OTEC logo centred on a dark square (`public/favicon.png`, 32px, and
+  `public/apple-touch-icon.png`, 180px), rendered from the supplied PNG. Regenerate from the
+  vector logo once the client sends it.
 
 ## Palette
 
@@ -40,7 +44,7 @@ visual language instead of relying on stock imagery (the old site's lightning ph
 
 ## Page rhythm (home)
 
-Header 88px, hero, glance strip (alt ground), about, services (alt ground), projects,
+Header 88px, hero, about (with performance stats), services (alt ground), projects,
 contact band (alt ground), footer. Grounds alternate so sections separate without boxes.
 Desktop gutter 96px, section padding 120px, both fluid down to 20px / 72px.
 

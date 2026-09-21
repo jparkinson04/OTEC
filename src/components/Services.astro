@@ -6,14 +6,14 @@ import { services } from '@/data/services';
 
 <section class="section section--alt" aria-labelledby="services-h">
   <div class="container services">
-    <SectionHeading label="Services" title="A full range of electrical services." id="services-h">
+    <SectionHeading title="Services" id="services-h">
       <p>
         Power, safety, security and connectivity, handled by one team from design through to
         testing.
       </p>
     </SectionHeading>
     <ul class="services__grid" role="list">
-      {services.map((service, i) => <li><ServiceCard service={service} index={i} /></li>)}
+      {services.map((service) => <li><ServiceCard service={service} /></li>)}
     </ul>
   </div>
 </section>

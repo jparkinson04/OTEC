@@ -1,8 +1,9 @@
 ---
-// Mono label + display heading, with an optional right-hand slot (intro copy or a link).
+// Display heading with an optional mono label above it and an optional right-hand slot
+// (intro copy or a link).
 interface Props {
-  label: string;
   title: string;
+  label?: string;
   id?: string;
   as?: 'h1' | 'h2';
 }
@@ -11,7 +12,7 @@ const { label, title, id, as: Tag = 'h2' } = Astro.props;
 
 <div class="heading">
   <div class="heading__main">
-    <span class="label">{label}</span>
+    {label && <span class="label">{label}</span>}
     <Tag id={id} class="display h2">{title}</Tag>
   </div>
   {Astro.slots.has('default') && <div class="heading__aside"><slot /></div>}

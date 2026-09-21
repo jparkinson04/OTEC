@@ -1,4 +1,6 @@
 ---
+import Stats from '@/components/Stats.astro';
+
 const steps = [
   { title: 'Design', text: 'Systems planned around your exact requirements.' },
   { title: 'Installation', text: 'Domestic, commercial and industrial installs.' },
@@ -11,14 +13,16 @@ const steps = [
   <div class="container about__inner">
     <div class="about__top">
       <div class="about__heading">
-        <span class="label">About OTEC</span>
-        <h2 id="about-h" class="display h2">From first design to long-term maintenance.</h2>
+        <h2 id="about-h" class="display h2">About OTEC</h2>
+        <p class="muted">
+          OTEC is an electrical engineering company that works UK wide in the public and private
+          sectors, on industrial, commercial and domestic projects. We provide a full range of
+          services from design through to installation, commissioning and maintenance. Our
+          expertise in all areas of electrical engineering and project management ensures a high
+          quality, value for money service for all our customers.
+        </p>
       </div>
-      <p class="muted">
-        OTEC is an electrical engineering company working UK wide in the public and private
-        sectors. Our expertise in all areas of electrical engineering and project management
-        ensures a high quality, value for money service for every customer.
-      </p>
+      <Stats />
     </div>
 
     <ol class="process" role="list">
@@ -47,8 +51,8 @@ const steps = [
   .about__top {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2rem 6rem;
-    align-items: end;
+    gap: 3rem 6rem;
+    align-items: center;
   }
   .about__heading {
     display: flex;

@@ -7,7 +7,7 @@ Built by Seam Digital Studio. Client contact: Paul Owen.
 
 Three pages, dark theme:
 
-1. **Home** (`/`): hero, at-a-glance strip, about + process, nine services, featured projects, contact band.
+1. **Home** (`/`): hero, about + stats + process, nine services, featured projects, contact band.
 2. **Projects** (`/projects/`): interactive map. Hover a pin to preview a project, click into a
    project profile (`/projects/<slug>/`) with all the photos and a short write-up.
 3. **Contact** (`/contact/`): form wired to email, plus contact details.
@@ -58,8 +58,10 @@ from the OTEC logo used as the recurring motif (`CircuitTraces.astro`, the proce
 - Headings: Archivo Variable at `font-stretch: 125%`, weight 600 (use the `.display` class).
   Body: IBM Plex Sans. Small technical labels: IBM Plex Mono, uppercase, tracked (`.label`).
 - Corners are sharp: 2px on buttons and inputs, 4px on cards. No pills, no large radii.
-- No gradient washes, glows, drop shadows, glassmorphism or emoji. Depth comes from the
-  three ground colours and hairlines.
+- No drop shadows, glassmorphism or emoji. The only gradient or glow allowed is the single
+  ambient glow defined as `.ambient` in `global.css` (brand blue at low alpha over the ground),
+  used on the hero, page headers and the map panel. Depth otherwise comes from the three ground
+  colours and hairlines.
 - Icons are inline stroke SVGs via `Icon.astro` (24px grid, 1.6 stroke). No icon fonts.
 - Dark text (`--blue-ink`) on blue fills. Body text must pass 4.5:1. `--text-dim` is the
   lightest grey allowed for text.
@@ -71,8 +73,9 @@ from the OTEC logo used as the recurring motif (`CircuitTraces.astro`, the proce
 
 - UK English. Warm and plain, no agency-speak.
 - **No em dashes anywhere in site copy.** Use commas, full stops or "to".
-- No invented facts, stats, accreditations or testimonials. The old site's "99% response"
-  bars were dropped on purpose. If a fact is missing, use a bracketed placeholder like
+- No invented facts, stats, accreditations or testimonials. Performance stats on the home page
+  come from `src/data/stats.ts` and are client-supplied. Never change the values or add new
+  stats without confirmation from Alfie. If a fact is missing, use a bracketed placeholder like
   `[PHONE NUMBER]` and list it in the task summary.
 - Service copy is condensed from the current live site. Keep the meaning if you edit it.
 

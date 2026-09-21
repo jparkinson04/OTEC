@@ -3,17 +3,12 @@ import CircuitTraces from '@/components/CircuitTraces.astro';
 import Icon from '@/components/Icon.astro';
 ---
 
-<section class="hero">
+<section class="hero ambient">
   <CircuitTraces variant="hero" class="hero__traces" />
   <div class="container hero__inner">
-    <div class="hero__eyebrow label">
-      <span class="hero__dot" aria-hidden="true"></span>
-      Electrical engineering / UK wide
-    </div>
-    <h1 class="display h1">Innovation in electrical engineering<span class="hero__stop">.</span></h1>
+    <h1 class="display h1">Home to innovation in electrical engineering<span class="hero__stop">.</span></h1>
     <p class="hero__lead">
-      Design, installation, commissioning and maintenance for industrial, commercial and domestic
-      projects across the UK.
+      Electrical design, installation, commissioning and maintenance, UK wide.
     </p>
     <div class="hero__actions">
       <a class="btn btn--primary" href="/projects/">View our projects <Icon name="arrow" size={18} strokeWidth={2} /></a>
@@ -30,10 +25,6 @@ import Icon from '@/components/Icon.astro';
     align-items: center;
     min-height: min(43.75rem, 86vh);
     padding-block: 5rem;
-    background-image:
-      linear-gradient(var(--blue-faint) 1px, transparent 1px),
-      linear-gradient(90deg, var(--blue-faint) 1px, transparent 1px);
-    background-size: 48px 48px;
   }
   .hero :global(.hero__traces) {
     position: absolute;
@@ -50,25 +41,18 @@ import Icon from '@/components/Icon.astro';
     align-items: flex-start;
     gap: 2rem;
   }
-  .hero__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.875rem;
-  }
-  .hero__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--blue);
-  }
   .hero h1 {
     max-width: 44rem;
+    /* A step below --fs-h1 (30 -> 68px) so the uppercase headline breaks into even lines
+       and "ENGINEERING." still fits a 320px screen. */
+    font-size: clamp(1.875rem, 0.9rem + 4.5vw, 4.25rem);
+    text-wrap: balance;
   }
   .hero__stop {
     color: var(--blue);
   }
   .hero__lead {
-    max-width: 35rem;
+    max-width: 32rem;
     font-size: var(--fs-lead);
     line-height: 1.6;
     color: var(--text-muted);
