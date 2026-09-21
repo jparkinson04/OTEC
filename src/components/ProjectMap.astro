@@ -1,0 +1,873 @@
+---
+// Interactive UK project map. Everything geographic (outline, pin positions, list) is rendered
+// at build time, so the map and every link work without JavaScript. The client script only
+// adds hover previews, clustering, filtering, zoom and pan. Nothing here is per-project:
+// add a markdown file with lat/lng and it appears.
+import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
+import Icon from '@/components/Icon.astro';
+import { paths, project, viewBox } from '@/lib/map';
+
+const entries = (await getCollection('projects', ({ data }) => !data.draft)).sort(
+  (a, b) =>
+    (b.data.date?.getTime() ?? 0) - (a.data.date?.getTime() ?? 0) ||
+    a.data.title.localeCompare(b.data.title),
+);
+
+const projects = await Promise.all(
+  entries.map(async (p) => {
+    const [x, y] = project(p.data.lat, p.data.lng);
+    const thumb = p.data.cover
+      ? (await getImage({ src: p.data.cover, width: 640, format: 'webp' })).src
+      : '';
+    return {
+      id: p.id,
+      title: p.data.title,
+      location: p.data.location,
+      sector: p.data.sector,
+      summary: p.data.summary,
+      url: `/projects/${p.id}/`,
+      x,
+      y,
+      thumb,
+    };
+  }),
+);
+
+// Filter chips in the schema's order, with any free-text sectors after.
+const order = ['Industrial', 'Commercial', 'Domestic', 'Public sector'];
+const sectors = [...new Set(projects.map((p) => p.sector))].sort(
+  (a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b),
+);
+// Escape "<" so the JSON can never close its own <script> tag.
+const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
+---
+
+<section class="pm" data-project-map>
+  <div class="pm__panel ambient" data-panel>
+    <svg
+      class="pm__svg"
+      viewBox={viewBox}
+      preserveAspectRatio="xMidYMid meet"
+      role="group"
+      aria-label="Map of the UK showing OTEC project locations"
+      data-svg
+    >
+      <path class="pm__ie" d={paths.ie} />
+      <path class="pm__uk" d={paths.uk} />
+      <g data-pins>
+        {
+          projects.map((p) => (
+            <a
+              class="pin"
+              href={p.url}
+              data-pin={p.id}
+              data-sector={p.sector}
+              transform={`translate(${p.x} ${p.y})`}
+              aria-label={`${p.title}, ${p.location}`}
+            >
+              <circle class="pin__hit" r="22" />
+              <circle class="pin__ring" r="13" />
+              <circle class="pin__node" r="7" />
+            </a>
+          ))
+        }
+      </g>
+    </svg>
+
+    <div class="pm__clusters" data-clusters></div>
+    <svg class="pm__trace" data-trace aria-hidden="true"><path></path></svg>
+
+    <div class="pm__legend">
+      <span class="label">UK projects</span>
+      <span class="pm__count display" data-count>{projects.length}</span>
+    </div>
+
+    <div class="pm__zoom" data-zoom-controls hidden>
+      <button type="button" class="btn btn--ghost pm__zbtn" data-zoom="in" aria-label="Zoom in">
+        <Icon name="plus" size={20} strokeWidth={1.8} />
+      </button>
+      <button type="button" class="btn btn--ghost pm__zbtn" data-zoom="out" aria-label="Zoom out">
+        <Icon name="minus" size={20} strokeWidth={1.8} />
+      </button>
+      <button type="button" class="btn btn--ghost pm__zbtn" data-zoom="reset" aria-label="Reset zoom">
+        <Icon name="fit" size={20} strokeWidth={1.8} />
+      </button>
+    </div>
+
+    <article class="pm__card" data-card hidden>
+      <a class="pm__card-link" href="/projects/" data-card-link>
+        <span class="pm__card-media">
+          <img data-card-img alt="" width="640" height="480" loading="lazy" hidden />
+          <span class="placeholder pm__card-ph" data-card-ph>[Project photo]</span>
+        </span>
+        <span class="pm__card-body">
+          <span class="label label--dim" data-card-label></span>
+          <span class="display h3" data-card-title></span>
+          <span class="muted pm__card-summary" data-card-summary></span>
+          <span class="link-arrow pm__card-cta">View project <Icon name="arrow" size={18} strokeWidth={2} /></span>
+        </span>
+      </a>
+    </article>
+  </div>
+
+  <div class="pm__side">
+    <div class="pm__filter" role="group" aria-label="Filter projects by sector" data-filters hidden>
+      <button type="button" class="pm__chip" aria-pressed="true" data-filter="">All</button>
+      {
+        sectors.map((s) => (
+          <button type="button" class="pm__chip" aria-pressed="false" data-filter={s}>
+            {s}
+          </button>
+        ))
+      }
+    </div>
+    <ul class="pm__list" role="list" data-list>
+      {
+        projects.map((p) => (
+          <li>
+            <a class="row" href={p.url} data-row={p.id} data-sector={p.sector}>
+              <span class="row__node" aria-hidden="true" />
+              <span class="row__text">
+                <span class="row__title">{p.title}</span>
+                <span class="label label--dim">
+                  {p.sector} / {p.location}
+                </span>
+              </span>
+              <Icon name="arrow" size={18} strokeWidth={2} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  <script is:inline type="application/json" data-map-data set:html={payload} />
+</section>
+
+<script>
+  type P = {
+    id: string;
+    title: string;
+    location: string;
+    sector: string;
+    summary: string;
+    url: string;
+    x: number;
+    y: number;
+    thumb: string;
+  };
+
+  const root = document.querySelector<HTMLElement>('[data-project-map]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const q = <T extends Element>(s: string, el: ParentNode = root) => el.querySelector<T>(s)!;
+    const data: P[] = JSON.parse(q('[data-map-data]').textContent || '[]');
+    const byId = new Map(data.map((p) => [p.id, p]));
+    const panel = q<HTMLElement>('[data-panel]');
+    const svg = q<SVGSVGElement>('[data-svg]');
+    const clustersEl = q<HTMLElement>('[data-clusters]');
+    const trace = q<SVGSVGElement>('[data-trace]');
+    const tracePath = q<SVGPathElement>('path', trace);
+    const card = q<HTMLElement>('[data-card]');
+    const countEl = q<HTMLElement>('[data-count]');
+    const pins = new Map<string, SVGAElement>();
+    root.querySelectorAll<SVGAElement>('[data-pin]').forEach((a) => pins.set(a.dataset.pin!, a));
+    const rows = new Map<string, HTMLAnchorElement>();
+    root.querySelectorAll<HTMLAnchorElement>('[data-row]').forEach((a) => rows.set(a.dataset.row!, a));
+
+    const W = svg.viewBox.baseVal.width;
+    const H = svg.viewBox.baseVal.height;
+    const MAX_K = 16;
+    const isMobile = () => matchMedia('(max-width: 1000px)').matches;
+
+    // ---------- view (zoom + pan via the viewBox) ----------
+    let vb = { x: 0, y: 0, w: W, h: H };
+    let pxPerUnit = 1;
+    let filter = '';
+    let active: string | null = null;
+    let visible = new Set(data.map((p) => p.id));
+
+    const ctm = () => svg.getScreenCTM()!;
+    const toScreen = (x: number, y: number) => {
+      const pt = new DOMPoint(x, y).matrixTransform(ctm());
+      const r = panel.getBoundingClientRect();
+      return { x: pt.x - r.left, y: pt.y - r.top };
+    };
+    const toMap = (clientX: number, clientY: number) => new DOMPoint(clientX, clientY).matrixTransform(ctm().inverse());
+
+    function setView(x: number, y: number, w: number) {
+      w = Math.min(W, Math.max(W / MAX_K, w));
+      const h = (w * H) / W;
+      vb = { x: Math.min(W - w, Math.max(0, x)), y: Math.min(H - h, Math.max(0, y)), w, h };
+      svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+      layout();
+    }
+    const zoomAt = (factor: number, cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2) => {
+      const w = vb.w / factor;
+      const h = (w * H) / W;
+      const fx = (cx - vb.x) / vb.w;
+      const fy = (cy - vb.y) / vb.h;
+      setView(cx - fx * w, cy - fy * h, w);
+    };
+
+    // Pins are drawn in screen pixels: counter-scale them so nodes and hit areas stay the
+    // same size at every zoom level.
+    function layout() {
+      pxPerUnit = ctm().a;
+      const s = 1 / pxPerUnit;
+      pins.forEach((a, id) => {
+        const p = byId.get(id)!;
+        a.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${s})`);
+      });
+      cluster();
+      if (active) place(active);
+    }
+
+    // ---------- clustering ----------
+    function cluster() {
+      clustersEl.textContent = '';
+      const limit = 22 / pxPerUnit;
+      const pool = data.filter((p) => visible.has(p.id));
+      const used = new Set<string>();
+      for (const p of pool) {
+        if (used.has(p.id)) continue;
+        const members = pool.filter((o) => !used.has(o.id) && Math.hypot(o.x - p.x, o.y - p.y) <= limit);
+        members.forEach((m) => used.add(m.id));
+        if (members.length < 2) {
+          pins.get(p.id)!.classList.remove('is-clustered');
+          continue;
+        }
+        const cx = members.reduce((n, m) => n + m.x, 0) / members.length;
+        const cy = members.reduce((n, m) => n + m.y, 0) / members.length;
+        members.forEach((m) => pins.get(m.id)!.classList.add('is-clustered'));
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cluster';
+        b.textContent = String(members.length);
+        b.setAttribute('aria-label', `${members.length} projects here, zoom in to separate them`);
+        const at = toScreen(cx, cy);
+        b.style.left = `${at.x}px`;
+        b.style.top = `${at.y}px`;
+        b.addEventListener('click', () => {
+          const xs = members.map((m) => m.x);
+          const ys = members.map((m) => m.y);
+          const span = Math.max(Math.max(...xs) - Math.min(...xs), ((Math.max(...ys) - Math.min(...ys)) * W) / H);
+          setView(cx - span, cy - (span * H) / W, span * 2);
+        });
+        clustersEl.append(b);
+      }
+    }
+
+    // ---------- filter ----------
+    const filters = q<HTMLElement>('[data-filters]');
+    filters.hidden = false;
+    filters.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) =>
+      b.addEventListener('click', () => {
+        filter = b.dataset.filter || '';
+        filters.querySelectorAll('[data-filter]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+        visible = new Set(data.filter((p) => !filter || p.sector === filter).map((p) => p.id));
+        pins.forEach((a, id) => a.classList.toggle('is-hidden', !visible.has(id)));
+        rows.forEach((a, id) => (a.parentElement!.hidden = !visible.has(id)));
+        countEl.textContent = String(visible.size);
+        if (active && !visible.has(active)) deactivate();
+        cluster();
+      }),
+    );
+
+    // ---------- preview card + trace ----------
+    let leaveTimer = 0;
+    const cardLink = q<HTMLAnchorElement>('[data-card-link]');
+    const cardImg = q<HTMLImageElement>('[data-card-img]');
+    const cardPh = q<HTMLElement>('[data-card-ph]');
+
+    function activate(id: string, scroll = false) {
+      clearTimeout(leaveTimer);
+      if (active === id) return;
+      if (active) deactivate();
+      const p = byId.get(id);
+      if (!p) return;
+      active = id;
+      pins.get(id)?.classList.add('is-active');
+      const row = rows.get(id);
+      row?.classList.add('is-active');
+      if (scroll) row?.scrollIntoView({ block: 'nearest' });
+      cardLink.href = p.url;
+      q('[data-card-label]').textContent = `${p.sector} / ${p.location}`;
+      q('[data-card-title]').textContent = p.title;
+      q('[data-card-summary]').textContent = p.summary;
+      cardImg.hidden = !p.thumb;
+      cardPh.hidden = !!p.thumb;
+      if (p.thumb) cardImg.src = p.thumb;
+      card.hidden = false;
+      place(id);
+    }
+
+    function deactivate() {
+      if (!active) return;
+      pins.get(active)?.classList.remove('is-active');
+      rows.get(active)?.classList.remove('is-active');
+      active = null;
+      card.hidden = true;
+      trace.classList.remove('is-on');
+    }
+
+    function place(id: string) {
+      const p = byId.get(id)!;
+      card.classList.toggle('pm__card--sheet', isMobile());
+      if (isMobile()) {
+        card.style.cssText = '';
+        trace.classList.remove('is-on');
+        return;
+      }
+      const pw = panel.clientWidth;
+      const ph = panel.clientHeight;
+      const pin = toScreen(p.x, p.y);
+      const cw = Math.min(320, pw - 24);
+      const ch = card.offsetHeight;
+      const right = pin.x < pw / 2;
+      const gap = 64;
+      let cx = right ? pin.x + gap : pin.x - gap - cw;
+      cx = Math.min(pw - cw - 12, Math.max(12, cx));
+      const cy = Math.min(ph - ch - 12, Math.max(12, pin.y - ch / 2));
+      card.style.cssText = `left:${cx}px;top:${cy}px;width:${cw}px`;
+
+      // Trace: leave the pin horizontally, one 45 degree jog, arrive at the card edge.
+      const startX = pin.x + (right ? 14 : -14);
+      const endX = right ? cx : cx + cw;
+      const endY = Math.min(cy + ch - 24, Math.max(cy + 24, pin.y));
+      const dy = endY - pin.y;
+      const run = Math.abs(endX - startX);
+      const dir = right ? 1 : -1;
+      let d = `M${startX} ${pin.y}`;
+      if (run > Math.abs(dy) + 24) {
+        const a = (run - Math.abs(dy)) / 2;
+        d += `h${dir * a}L${startX + dir * (a + Math.abs(dy))} ${endY}H${endX}`;
+      } else {
+        d += `L${endX} ${endY}`;
+      }
+      tracePath.setAttribute('d', d);
+      const len = tracePath.getTotalLength();
+      tracePath.style.strokeDasharray = `${len}`;
+      tracePath.style.strokeDashoffset = `${len}`;
+      trace.classList.remove('is-on');
+      void tracePath.getBoundingClientRect();
+      trace.classList.add('is-on');
+    }
+
+    const scheduleClose = () => {
+      clearTimeout(leaveTimer);
+      leaveTimer = window.setTimeout(deactivate, 140);
+    };
+
+    let lastPointer = 'mouse';
+    root.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
+
+    pins.forEach((a, id) => {
+      a.addEventListener('pointerenter', (e) => e.pointerType !== 'touch' && activate(id, true));
+      a.addEventListener('pointerleave', scheduleClose);
+      a.addEventListener('focus', () => activate(id, true));
+      a.addEventListener('click', (e) => {
+        if (dragged) return e.preventDefault();
+        // Touch has no hover: first tap opens the preview, tapping the card follows the link.
+        if (lastPointer === 'touch' && (active !== id || card.hidden)) {
+          e.preventDefault();
+          activate(id, true);
+        }
+      });
+    });
+    rows.forEach((a, id) => {
+      a.addEventListener('pointerenter', (e) => e.pointerType !== 'touch' && activate(id));
+      a.addEventListener('pointerleave', scheduleClose);
+      a.addEventListener('focus', () => activate(id));
+    });
+    card.addEventListener('pointerenter', () => clearTimeout(leaveTimer));
+    card.addEventListener('pointerleave', scheduleClose);
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && deactivate());
+    document.addEventListener('pointerdown', (e) => {
+      const t = e.target as Element;
+      if (!t.closest('[data-card],[data-pin],[data-row]')) deactivate();
+    });
+    root.addEventListener('focusout', (e) => {
+      const to = e.relatedTarget as Element | null;
+      if (!to || !to.closest('[data-card],[data-pin],[data-row]')) scheduleClose();
+    });
+
+    // ---------- zoom controls, wheel, drag, pinch ----------
+    const zoomControls = q<HTMLElement>('[data-zoom-controls]');
+    zoomControls.hidden = false;
+    zoomControls.querySelectorAll<HTMLButtonElement>('[data-zoom]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const z = b.dataset.zoom;
+        if (z === 'in') zoomAt(1.6);
+        else if (z === 'out') zoomAt(1 / 1.6);
+        else setView(0, 0, W);
+      }),
+    );
+    svg.addEventListener(
+      'wheel',
+      (e) => {
+        if (!e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        const m = toMap(e.clientX, e.clientY);
+        zoomAt(e.deltaY < 0 ? 1.25 : 0.8, m.x, m.y);
+      },
+      { passive: false },
+    );
+
+    const pointers = new Map<number, { x: number; y: number }>();
+    let dragged = false;
+    let pinchDist = 0;
+    svg.addEventListener('pointerdown', (e) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      dragged = false;
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+      }
+    });
+    svg.addEventListener('pointermove', (e) => {
+      const prev = pointers.get(e.pointerId);
+      if (!prev) return;
+      if (pointers.size === 2) {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const [a, b] = [...pointers.values()];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinchDist) {
+          const m = toMap((a.x + b.x) / 2, (a.y + b.y) / 2);
+          zoomAt(dist / pinchDist, m.x, m.y);
+        }
+        pinchDist = dist;
+        dragged = true;
+        return;
+      }
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+      if (!dragged && Math.hypot(dx, dy) < 3) return;
+      // Capture only once a real drag starts, so plain clicks on pins still reach the links.
+      if (!dragged) svg.setPointerCapture(e.pointerId);
+      dragged = true;
+      if (vb.w < W) {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        setView(vb.x - dx / pxPerUnit, vb.y - dy / pxPerUnit, vb.w);
+      }
+    });
+    const release = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      pinchDist = 0;
+    };
+    svg.addEventListener('pointerup', release);
+    svg.addEventListener('pointercancel', release);
+
+    // ---------- start ----------
+    new ResizeObserver(layout).observe(panel);
+    layout();
+    const focusId = new URLSearchParams(location.search).get('focus');
+    const focusP = focusId && byId.get(focusId);
+    if (focusP) {
+      const w = W / 4;
+      setView(focusP.x - w / 2, focusP.y - (w * H) / W / 2, w);
+      activate(focusP.id, true);
+      panel.scrollIntoView({ block: 'start' });
+    }
+  }
+</script>
+
+<style>
+  .pm {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 3rem;
+    align-items: start;
+  }
+
+  /* ---------- panel ---------- */
+  .pm__panel {
+    position: sticky;
+    top: calc(var(--header-h) + 1.5rem);
+    height: calc(100vh - var(--header-h) - 3rem);
+    min-height: 720px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    --glow-at: 30% 30%;
+  }
+  .pm__svg {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    touch-action: pan-y;
+    cursor: grab;
+  }
+  .pm__svg:active {
+    cursor: grabbing;
+  }
+  .pm__uk {
+    fill: var(--surface);
+    fill-opacity: 0.55;
+    stroke: var(--blue);
+    stroke-width: 1.25;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .pm__ie {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* ---------- pins ---------- */
+  .pin {
+    cursor: pointer;
+    outline: none;
+  }
+  .pin__hit {
+    fill: transparent;
+  }
+  .pin__ring,
+  .pin__node {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .pin__ring {
+    fill: none;
+    stroke: var(--blue);
+    stroke-width: 1.5;
+    opacity: 0.4;
+    transition:
+      opacity var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+  .pin__node {
+    fill: var(--blue);
+    transition: transform var(--dur) var(--ease);
+  }
+  .pin:hover .pin__node,
+  .pin.is-active .pin__node,
+  .pin:focus-visible .pin__node {
+    transform: scale(1.3);
+  }
+  .pin:hover .pin__ring,
+  .pin.is-active .pin__ring,
+  .pin:focus-visible .pin__ring {
+    opacity: 1;
+  }
+  .pin:focus-visible .pin__ring {
+    stroke-width: 2.5;
+  }
+  .pin.is-hidden,
+  .pin.is-clustered {
+    display: none;
+  }
+
+  /* ---------- clusters (real buttons, positioned over the SVG) ---------- */
+  .pm__clusters {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .pm__clusters :global(.cluster) {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: pointer;
+    font: 500 var(--fs-label) / 1 var(--font-mono);
+    color: var(--blue-ink);
+  }
+  .pm__clusters :global(.cluster)::before,
+  .pm__clusters :global(.cluster)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition:
+      opacity var(--dur) var(--ease),
+      width var(--dur) var(--ease),
+      height var(--dur) var(--ease);
+  }
+  .pm__clusters :global(.cluster)::before {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid var(--blue);
+    opacity: 0.4;
+  }
+  .pm__clusters :global(.cluster)::after {
+    width: 22px;
+    height: 22px;
+    background: var(--blue);
+    z-index: -1;
+  }
+  .pm__clusters :global(.cluster):hover::before,
+  .pm__clusters :global(.cluster):focus-visible::before {
+    opacity: 1;
+  }
+  .pm__clusters :global(.cluster) {
+    display: grid;
+    place-items: center;
+    isolation: isolate;
+  }
+
+  /* ---------- trace to the card ---------- */
+  .pm__trace {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .pm__trace path {
+    fill: none;
+    stroke: var(--blue);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke-dashoffset 250ms var(--ease);
+  }
+  .pm__trace.is-on {
+    opacity: 1;
+  }
+  .pm__trace.is-on path {
+    stroke-dashoffset: 0 !important;
+  }
+
+  /* ---------- legend + zoom ---------- */
+  .pm__legend {
+    position: absolute;
+    top: 1.25rem;
+    left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    pointer-events: none;
+  }
+  .pm__count {
+    font-size: 1.75rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .pm__zoom {
+    position: absolute;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .pm__zbtn {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    background: var(--bg);
+  }
+
+  /* ---------- preview card ---------- */
+  .pm__card {
+    position: absolute;
+    z-index: 2;
+    width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--line-card);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+  .pm__card-link {
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+  }
+  .pm__card-link:hover {
+    color: inherit;
+  }
+  .pm__card-media {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--bg-alt);
+  }
+  .pm__card-media img,
+  .pm__card-ph {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .pm__card-media img {
+    object-fit: cover;
+  }
+  .pm__card-ph {
+    border-width: 0 0 1px;
+    border-radius: 0;
+  }
+  .pm__card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.125rem 1.25rem 1rem;
+  }
+  .pm__card-body .h3 {
+    font-size: 1.125rem;
+  }
+  .pm__card-summary {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: var(--fs-small);
+    line-height: 1.5;
+  }
+  .pm__card-cta {
+    min-height: 2rem;
+    font-size: var(--fs-small);
+  }
+  .pm__card--sheet {
+    left: 0 !important;
+    right: 0;
+    bottom: 0;
+    top: auto !important;
+    width: auto !important;
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+  .pm__card--sheet .pm__card-link {
+    flex-direction: row;
+  }
+  .pm__card--sheet .pm__card-media {
+    flex: 0 0 34%;
+    aspect-ratio: auto;
+  }
+  .pm__card--sheet .pm__card-ph {
+    border-width: 0 1px 0 0;
+  }
+  .pm__card--sheet .pm__card-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ---------- side: filter + list ---------- */
+  .pm__side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+  .pm__filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .pm__chip {
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    font: 500 var(--fs-small) / 1 var(--font-body);
+    cursor: pointer;
+    transition:
+      border-color var(--dur) var(--ease),
+      background var(--dur) var(--ease),
+      color var(--dur) var(--ease);
+  }
+  .pm__chip:hover {
+    border-color: var(--blue);
+  }
+  .pm__chip[aria-pressed='true'] {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: var(--blue-ink);
+  }
+  .pm__list {
+    margin: 0;
+    border-top: 1px solid var(--line);
+  }
+  .pm__list li[hidden] {
+    display: none;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding: 0.75rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    color: inherit;
+  }
+  .row:hover,
+  .row.is-active {
+    color: inherit;
+  }
+  .row__node {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--blue);
+    border-radius: 50%;
+    transition: background var(--dur) var(--ease);
+  }
+  .row:hover .row__node,
+  .row.is-active .row__node,
+  .row:focus-visible .row__node {
+    background: var(--blue);
+  }
+  .row__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+  .row__title {
+    font-weight: 500;
+    transition: color var(--dur) var(--ease);
+  }
+  .row:hover .row__title,
+  .row.is-active .row__title {
+    color: var(--blue);
+  }
+  .row svg {
+    flex-shrink: 0;
+    color: var(--blue);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+  .row:hover svg,
+  .row.is-active svg,
+  .row:focus-visible svg {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---------- tablet and mobile ---------- */
+  @media (max-width: 1000px) {
+    .pm {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .pm__panel {
+      position: relative;
+      top: auto;
+      height: 70vh;
+      min-height: 26rem;
+    }
+    .pm__trace {
+      display: none;
+    }
+  }
+</style>

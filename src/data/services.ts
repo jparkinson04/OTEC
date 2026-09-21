@@ -8,7 +8,10 @@ export type IconName =
   | 'network'
   | 'sun'
   | 'lock'
-  | 'arrow';
+  | 'arrow'
+  | 'plus'
+  | 'minus'
+  | 'fit';
 
 export interface Service {
   title: string;
