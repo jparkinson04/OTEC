@@ -1,0 +1,61 @@
+---
+// Where to find OTEC: an embedded Google map of the office with a directions link.
+// Map details live in src/data/site.ts. The iframe is lazy-loaded so it costs nothing
+// until the visitor scrolls to it.
+import Icon from '@/components/Icon.astro';
+import { site } from '@/data/site';
+---
+
+<section class="find-us" aria-labelledby="find-us-h">
+  <div class="find-us__head">
+    <div class="find-us__text">
+      <h2 id="find-us-h" class="label label--dim">Find us</h2>
+      <p>{site.address}</p>
+    </div>
+    <a class="link-arrow" href={site.location.directionsHref} target="_blank" rel="noopener">
+      Get directions <Icon name="arrow" size={18} strokeWidth={2} />
+      <span class="sr-only">(opens Google Maps in a new tab)</span>
+    </a>
+  </div>
+  <iframe
+    class="find-us__map"
+    src={site.location.mapEmbedSrc}
+    title={`Map showing ${site.legalName} at ${site.address}`}
+    loading="lazy"
+    referrerpolicy="no-referrer-when-downgrade"
+    allowfullscreen></iframe>
+</section>
+
+<style>
+  .find-us {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .find-us__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+  .find-us__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .find-us__map {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    min-height: 20rem;
+    border: 1px solid var(--line-card);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+  @media (max-width: 640px) {
+    .find-us__map {
+      aspect-ratio: 4 / 3;
+    }
+  }
+</style>

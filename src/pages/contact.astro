@@ -2,6 +2,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PageHeader from '@/components/PageHeader.astro';
 import ContactForm from '@/components/ContactForm.astro';
+import LocationMap from '@/components/LocationMap.astro';
 import { site } from '@/data/site';
 ---
 
@@ -14,32 +15,41 @@ import { site } from '@/data/site';
   </PageHeader>
 
   <section class="section">
-    <div class="container contact">
-      <ContactForm />
+    <div class="container stack">
+      <div class="contact">
+        <ContactForm />
 
-      <aside class="details">
-        <div>
-          <h2 class="label label--dim">Phone</h2>
-          <p>{site.phoneHref ? <a href={site.phoneHref}>{site.phone}</a> : site.phone}</p>
-        </div>
-        <div>
-          <h2 class="label label--dim">Email</h2>
-          <p>{site.emailHref ? <a href={site.emailHref}>{site.email}</a> : site.email}</p>
-        </div>
-        <div>
-          <h2 class="label label--dim">Address</h2>
-          <p class="muted">{site.address}</p>
-        </div>
-        <div>
-          <h2 class="label label--dim">Coverage</h2>
-          <p class="muted">UK wide, public and private sector.</p>
-        </div>
-      </aside>
+        <aside class="details">
+          <div>
+            <h2 class="label label--dim">Phone</h2>
+            <p>{site.phoneHref ? <a href={site.phoneHref}>{site.phone}</a> : site.phone}</p>
+          </div>
+          <div>
+            <h2 class="label label--dim">Email</h2>
+            <p>{site.emailHref ? <a href={site.emailHref}>{site.email}</a> : site.email}</p>
+          </div>
+          <div>
+            <h2 class="label label--dim">Address</h2>
+            <p class="muted">{site.address}</p>
+          </div>
+          <div>
+            <h2 class="label label--dim">Coverage</h2>
+            <p class="muted">UK wide, public and private sector.</p>
+          </div>
+        </aside>
+      </div>
+
+      <LocationMap />
     </div>
   </section>
 </BaseLayout>
 
 <style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-y);
+  }
   .contact {
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
