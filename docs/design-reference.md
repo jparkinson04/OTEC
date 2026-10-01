@@ -16,7 +16,8 @@ visual language instead of relying on stock imagery (the old site's lightning ph
   brand-blue light rising from the top right. The glow replaced the original 48px blueprint
   grid at the client's request (September 2026) and is also used on page headers and the map panel.
 - **About:** the Design, Installation, Commissioning, Maintenance process is drawn as one trace
-  with four nodes. The last segment is grey: maintenance is ongoing. On mobile the rail turns vertical.
+  with four nodes. The last segment is grey: maintenance is ongoing. Under 900px the rail wraps into two
+  rows of two and the stats sit two by two, to keep the section short on phones.
 - **Contact band:** small trace brackets enter from each side and point at the call to action.
 - **Favicon:** the OTEC logo centred on a dark square (`public/favicon.png`, 32px, and
   `public/apple-touch-icon.png`, 180px), rendered from the supplied PNG. Regenerate from the
