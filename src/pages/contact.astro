@@ -10,11 +10,11 @@ import { site } from '@/data/site';
   title="Contact"
   description="Get in touch with OTEC about your electrical engineering project."
 >
-  <PageHeader label="Contact" title="Got a project in mind?">
+  <PageHeader label="Contact" title="Got a project in mind?" compact>
     Tell us what you need and we will work with you to design a system to your exact requirements.
   </PageHeader>
 
-  <section class="section">
+  <section class="section contact-section">
     <div class="container stack">
       <div class="contact">
         <ContactForm />
@@ -77,6 +77,15 @@ import { site } from '@/data/site';
   @media (max-width: 900px) {
     .contact {
       grid-template-columns: 1fr;
+    }
+  }
+  /* Phones: start the form straight under the header. */
+  @media (max-width: 640px) {
+    .contact-section {
+      padding-top: 1rem;
+    }
+    .contact {
+      gap: 2.5rem;
     }
   }
 </style>
