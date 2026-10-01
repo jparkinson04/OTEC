@@ -76,11 +76,21 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     </svg>
 
     <div class="pm__clusters" data-clusters></div>
+
+    <!-- Phones and tablets only: a small tab that pops up at a tapped pin or cluster. -->
+    <div class="pm__tab" data-tab hidden>
+      <span class="label label--dim" data-tab-label></span>
+      <ul role="list" data-tab-list></ul>
+      <button type="button" class="pm__tab-zoom" data-tab-zoom hidden>
+        Zoom in <Icon name="plus" size={16} strokeWidth={2} />
+      </button>
+    </div>
     <svg class="pm__trace" data-trace aria-hidden="true"><path></path></svg>
 
     <div class="pm__legend">
       <span class="label">UK projects</span>
       <span class="pm__count display" data-count>{projects.length}</span>
+      <span class="label label--dim pm__hint">Tap a pin or swipe the cards</span>
     </div>
 
     <div class="pm__zoom" data-zoom-controls hidden>
@@ -109,6 +119,27 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
         </span>
       </a>
     </article>
+
+    <!-- Phones and tablets: a swipeable row of project cards docked under the map.
+         Rendered at build time, so it is a plain scrollable list of links without JS. -->
+    <ul class="pm__strip" role="list" aria-label="Projects, swipe to browse" data-strip>
+      {
+        projects.map((p) => (
+          <li data-scard={p.id}>
+            <a class="scard" href={p.url}>
+              {p.thumb && <img class="scard__img" src={p.thumb} alt="" width="72" height="72" loading="lazy" />}
+              <span class="scard__text">
+                <span class="label label--dim">
+                  {p.sector} / {p.location}
+                </span>
+                <span class="scard__title display">{p.title}</span>
+              </span>
+              <Icon name="arrow" size={18} strokeWidth={2} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </div>
 
   <div class="pm__side">
@@ -176,11 +207,15 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     root.querySelectorAll<SVGAElement>('[data-pin]').forEach((a) => pins.set(a.dataset.pin!, a));
     const rows = new Map<string, HTMLAnchorElement>();
     root.querySelectorAll<HTMLAnchorElement>('[data-row]').forEach((a) => rows.set(a.dataset.row!, a));
+    const strip = q<HTMLElement>('[data-strip]');
+    const scards = new Map<string, HTMLElement>();
+    strip.querySelectorAll<HTMLElement>('[data-scard]').forEach((li) => scards.set(li.dataset.scard!, li));
 
     const W = svg.viewBox.baseVal.width;
     const H = svg.viewBox.baseVal.height;
     const MAX_K = 16;
     const isMobile = () => matchMedia('(max-width: 1000px)').matches;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ---------- view (zoom + pan via the viewBox) ----------
     let vb = { x: 0, y: 0, w: W, h: H };
@@ -212,6 +247,42 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       setView(cx - fx * w, cy - fy * h, w);
     };
 
+    // The resting view. Desktop shows the whole outline. Phones and tablets open fitted to the
+    // visible pins, so the map starts where the work is instead of on empty sea.
+    function home() {
+      const pool = data.filter((p) => visible.has(p.id));
+      if (!isMobile() || !pool.length) return { x: 0, y: 0, w: W };
+      const xs = pool.map((p) => p.x);
+      const ys = pool.map((p) => p.y);
+      const pad = 44;
+      const bw = Math.max(...xs) - Math.min(...xs) + pad * 2;
+      const bh = Math.max(...ys) - Math.min(...ys) + pad * 2;
+      const r = svg.getBoundingClientRect();
+      const fit = Math.min(r.width / bw, r.height / bh);
+      const w = Math.min(W, Math.max(W / 4, Math.min(r.width, (r.height * W) / H) / fit));
+      return {
+        x: (Math.max(...xs) + Math.min(...xs)) / 2 - w / 2,
+        y: (Math.max(...ys) + Math.min(...ys)) / 2 - (w * H) / W / 2,
+        w,
+      };
+    }
+
+    // Glide the view instead of jumping (instant under reduced motion).
+    let raf = 0;
+    function flyTo(to: { x: number; y: number; w: number }) {
+      cancelAnimationFrame(raf);
+      if (reduce) return setView(to.x, to.y, to.w);
+      const from = { ...vb };
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const k = Math.min(1, (now - t0) / 320);
+        const e = 1 - (1 - k) ** 3;
+        setView(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e, from.w + (to.w - from.w) * e);
+        if (k < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+
     // Pins are drawn in screen pixels: counter-scale them so nodes and hit areas stay the
     // same size at every zoom level.
     function layout() {
@@ -223,6 +294,7 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       });
       cluster();
       if (active) place(active);
+      placeTab();
     }
 
     // ---------- clustering ----------
@@ -251,10 +323,16 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
         b.style.left = `${at.x}px`;
         b.style.top = `${at.y}px`;
         b.addEventListener('click', () => {
-          const xs = members.map((m) => m.x);
-          const ys = members.map((m) => m.y);
-          const span = Math.max(Math.max(...xs) - Math.min(...xs), ((Math.max(...ys) - Math.min(...ys)) * W) / H);
-          setView(cx - span, cy - (span * H) / W, span * 2);
+          const zoom = () => {
+            const xs = members.map((m) => m.x);
+            const ys = members.map((m) => m.y);
+            const span = Math.max(Math.max(...xs) - Math.min(...xs), ((Math.max(...ys) - Math.min(...ys)) * W) / H);
+            flyTo({ x: cx - span, y: cy - (span * H) / W, w: span * 2 });
+          };
+          // Desktop zooms straight in. On a phone a tap lists what is here, with zoom as an option.
+          if (!isMobile()) return zoom();
+          deactivate();
+          showTab(members, cx, cy, zoom);
         });
         clustersEl.append(b);
       }
@@ -270,11 +348,66 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
         visible = new Set(data.filter((p) => !filter || p.sector === filter).map((p) => p.id));
         pins.forEach((a, id) => a.classList.toggle('is-hidden', !visible.has(id)));
         rows.forEach((a, id) => (a.parentElement!.hidden = !visible.has(id)));
+        scards.forEach((li, id) => (li.hidden = !visible.has(id)));
         countEl.textContent = String(visible.size);
         if (active && !visible.has(active)) deactivate();
+        hideTab();
         cluster();
+        if (isMobile()) {
+          strip.scrollLeft = 0;
+          flyTo(home());
+        }
       }),
     );
+
+    // ---------- tap tab (phones and tablets) ----------
+    const tab = q<HTMLElement>('[data-tab]');
+    const tabLabel = q<HTMLElement>('[data-tab-label]');
+    const tabList = q<HTMLElement>('[data-tab-list]');
+    const tabZoom = q<HTMLButtonElement>('[data-tab-zoom]');
+    let tabAt: { x: number; y: number } | null = null;
+    let tabZoomTo: (() => void) | null = null;
+
+    function showTab(items: P[], x: number, y: number, zoom?: () => void) {
+      tabAt = { x, y };
+      tabLabel.textContent =
+        items.length > 1
+          ? `${items.length} projects / ${[...new Set(items.map((p) => p.location))].join(', ')}`
+          : `${items[0].sector} / ${items[0].location}`;
+      tabList.textContent = '';
+      for (const p of items) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = p.url;
+        a.textContent = p.title;
+        li.append(a);
+        tabList.append(li);
+      }
+      tabZoom.hidden = !zoom;
+      tabZoomTo = zoom || null;
+      tab.hidden = false;
+      placeTab();
+    }
+    function hideTab() {
+      tabAt = null;
+      tab.hidden = true;
+    }
+    // Sits just above the dot, or below it when there is no room, and never leaves the map.
+    function placeTab() {
+      if (!tabAt) return;
+      const at = toScreen(tabAt.x, tabAt.y);
+      const w = tab.offsetWidth;
+      const h = tab.offsetHeight;
+      const maxTop = svg.getBoundingClientRect().height - h - 8;
+      const above = at.y - h - 20;
+      tab.style.left = `${Math.min(panel.clientWidth - w - 12, Math.max(12, at.x - w / 2))}px`;
+      tab.style.top = `${Math.max(8, Math.min(maxTop, above < 8 ? at.y + 20 : above))}px`;
+    }
+    tabZoom.addEventListener('click', () => {
+      const zoom = tabZoomTo;
+      hideTab();
+      zoom?.();
+    });
 
     // ---------- preview card + trace ----------
     let leaveTimer = 0;
@@ -282,7 +415,7 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     const cardImg = q<HTMLImageElement>('[data-card-img]');
     const cardPh = q<HTMLElement>('[data-card-ph]');
 
-    function activate(id: string, scroll = false) {
+    function activate(id: string, scroll = false, fromStrip = false) {
       clearTimeout(leaveTimer);
       if (active === id) return;
       if (active) deactivate();
@@ -292,7 +425,7 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       pins.get(id)?.classList.add('is-active');
       const row = rows.get(id);
       row?.classList.add('is-active');
-      if (scroll) row?.scrollIntoView({ block: 'nearest' });
+      if (scroll && !isMobile()) row?.scrollIntoView({ block: 'nearest' });
       cardLink.href = p.url;
       q('[data-card-label]').textContent = `${p.sector} / ${p.location}`;
       q('[data-card-title]').textContent = p.title;
@@ -300,6 +433,27 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       cardImg.hidden = !p.thumb;
       cardPh.hidden = !!p.thumb;
       if (p.thumb) cardImg.src = p.thumb;
+
+      if (isMobile()) {
+        // No floating card on small screens: the docked strip is the preview.
+        const li = scards.get(id);
+        li?.classList.add('is-active');
+        if (li && !fromStrip) {
+          strip.scrollTo({
+            left: li.offsetLeft - (strip.clientWidth - li.offsetWidth) / 2,
+            behavior: reduce ? 'auto' : 'smooth',
+          });
+        }
+        // A small tab at the dot says what it is. The zoom stays put: the map only pans,
+        // and only when the dot would otherwise be off screen.
+        showTab([p], p.x, p.y);
+        const at = toScreen(p.x, p.y);
+        const r = svg.getBoundingClientRect();
+        if (at.x < 40 || at.x > r.width - 40 || at.y < 40 || at.y > r.height - 40) {
+          flyTo({ x: p.x - vb.w / 2, y: p.y - vb.h / 2, w: vb.w });
+        }
+        return;
+      }
       card.hidden = false;
       place(id);
     }
@@ -308,6 +462,8 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       if (!active) return;
       pins.get(active)?.classList.remove('is-active');
       rows.get(active)?.classList.remove('is-active');
+      scards.get(active)?.classList.remove('is-active');
+      hideTab();
       active = null;
       card.hidden = true;
       trace.classList.remove('is-on');
@@ -315,12 +471,12 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
 
     function place(id: string) {
       const p = byId.get(id)!;
-      card.classList.toggle('pm__card--sheet', isMobile());
       if (isMobile()) {
-        card.style.cssText = '';
+        card.hidden = true;
         trace.classList.remove('is-on');
         return;
       }
+      card.hidden = false;
       const pw = panel.clientWidth;
       const ph = panel.clientHeight;
       const pin = toScreen(p.x, p.y);
@@ -371,7 +527,7 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       a.addEventListener('click', (e) => {
         if (dragged) return e.preventDefault();
         // Touch has no hover: first tap opens the preview, tapping the card follows the link.
-        if (lastPointer === 'touch' && (active !== id || card.hidden)) {
+        if (lastPointer === 'touch' && (active !== id || (card.hidden && !isMobile()))) {
           e.preventDefault();
           activate(id, true);
         }
@@ -382,16 +538,47 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
       a.addEventListener('pointerleave', scheduleClose);
       a.addEventListener('focus', () => activate(id));
     });
+    // Swiping the strip selects whichever card settles in the middle; the map follows.
+    let stripTimer = 0;
+    strip.addEventListener(
+      'scroll',
+      () => {
+        clearTimeout(stripTimer);
+        stripTimer = window.setTimeout(() => {
+          if (!isMobile()) return;
+          const mid = strip.scrollLeft + strip.clientWidth / 2;
+          let best = '';
+          let gap = Infinity;
+          scards.forEach((li, id) => {
+            const d = Math.abs(li.offsetLeft + li.offsetWidth / 2 - mid);
+            if (!li.hidden && d < gap) {
+              gap = d;
+              best = id;
+            }
+          });
+          if (best) activate(best, false, true);
+        }, 110);
+      },
+      { passive: true },
+    );
+
     card.addEventListener('pointerenter', () => clearTimeout(leaveTimer));
     card.addEventListener('pointerleave', scheduleClose);
-    document.addEventListener('keydown', (e) => e.key === 'Escape' && deactivate());
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      deactivate();
+      hideTab();
+    });
     document.addEventListener('pointerdown', (e) => {
       const t = e.target as Element;
-      if (!t.closest('[data-card],[data-pin],[data-row]')) deactivate();
+      if (!t.closest('[data-card],[data-pin],[data-row],[data-strip],[data-tab],.cluster')) {
+        deactivate();
+        hideTab();
+      }
     });
     root.addEventListener('focusout', (e) => {
       const to = e.relatedTarget as Element | null;
-      if (!to || !to.closest('[data-card],[data-pin],[data-row]')) scheduleClose();
+      if (!to || !to.closest('[data-card],[data-pin],[data-row],[data-strip]')) scheduleClose();
     });
 
     // ---------- zoom controls, wheel, drag, pinch ----------
@@ -402,7 +589,7 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
         const z = b.dataset.zoom;
         if (z === 'in') zoomAt(1.6);
         else if (z === 'out') zoomAt(1 / 1.6);
-        else setView(0, 0, W);
+        else flyTo(home());
       }),
     );
     svg.addEventListener(
@@ -463,6 +650,10 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     // ---------- start ----------
     new ResizeObserver(layout).observe(panel);
     layout();
+    if (isMobile()) {
+      const h = home();
+      setView(h.x, h.y, h.w);
+    }
     const focusId = new URLSearchParams(location.search).get('focus');
     const focusP = focusId && byId.get(focusId);
     if (focusP) {
@@ -617,6 +808,66 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     isolation: isolate;
   }
 
+  /* ---------- tap tab (phones and tablets) ---------- */
+  .pm__tab {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    width: max-content;
+    max-width: min(17rem, calc(100% - 24px));
+    padding: 0.625rem 0.875rem;
+    background: var(--surface);
+    border: 1px solid var(--blue);
+    border-radius: var(--radius-card);
+  }
+  .pm__tab[hidden] {
+    display: none;
+  }
+  .pm__tab ul {
+    max-height: 11rem;
+    margin: 0;
+    overflow-y: auto;
+  }
+  .pm__tab :global(li + li) {
+    border-top: 1px solid var(--line-card);
+  }
+  .pm__tab :global(a) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.875rem;
+    min-height: 2.75rem;
+    padding-block: 0.375rem;
+    color: var(--text-strong);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .pm__tab :global(a)::after {
+    content: '\2192';
+    flex-shrink: 0;
+    color: var(--blue);
+  }
+  .pm__tab-zoom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    margin-top: 0.25rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: none;
+    color: var(--text);
+    font: 500 var(--fs-small) / 1 var(--font-body);
+    cursor: pointer;
+  }
+  .pm__tab-zoom[hidden] {
+    display: none;
+  }
+
   /* ---------- trace to the card ---------- */
   .pm__trace {
     position: absolute;
@@ -656,6 +907,10 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     font-size: 1.75rem;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+  }
+  .pm__hint,
+  .pm__strip {
+    display: none;
   }
   .pm__zoom {
     position: absolute;
@@ -732,30 +987,6 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     min-height: 2rem;
     font-size: var(--fs-small);
   }
-  .pm__card--sheet {
-    left: 0 !important;
-    right: 0;
-    bottom: 0;
-    top: auto !important;
-    width: auto !important;
-    border-width: 1px 0 0;
-    border-radius: 0;
-  }
-  .pm__card--sheet .pm__card-link {
-    flex-direction: row;
-  }
-  .pm__card--sheet .pm__card-media {
-    flex: 0 0 34%;
-    aspect-ratio: auto;
-  }
-  .pm__card--sheet .pm__card-ph {
-    border-width: 0 1px 0 0;
-  }
-  .pm__card--sheet .pm__card-body {
-    flex: 1;
-    min-width: 0;
-  }
-
   /* ---------- side: filter + list ---------- */
   .pm__side {
     display: flex;
@@ -854,20 +1085,136 @@ const payload = JSON.stringify(projects).replace(/</g, '\\u003c');
     transform: none;
   }
 
-  /* ---------- tablet and mobile ---------- */
+  /* ---------- tablet and mobile ----------
+     Order: sector filter, then the map with a swipeable card strip docked under it, then
+     the full list. The map opens fitted to the pins and follows the strip. */
   @media (max-width: 1000px) {
     .pm {
-      grid-template-columns: 1fr;
-      gap: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 1.25rem;
+    }
+    .pm__side {
+      display: contents;
+    }
+    .pm__filter {
+      order: 1;
+      flex-wrap: nowrap;
+      margin-inline: calc(var(--gutter) * -1);
+      padding-inline: var(--gutter);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .pm__filter::-webkit-scrollbar,
+    .pm__strip::-webkit-scrollbar {
+      display: none;
+    }
+    .pm__chip {
+      flex-shrink: 0;
+    }
+    .pm__list {
+      order: 3;
+      margin-top: 0.75rem;
     }
     .pm__panel {
+      order: 2;
       position: relative;
       top: auto;
-      height: 70vh;
-      min-height: 26rem;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      /* Short enough that the map and the card strip share one phone screen. */
+      height: min(68vh, 38rem);
+      min-height: 27rem;
     }
-    .pm__trace {
+    .pm__svg {
+      flex: 1;
+      min-height: 0;
+      height: auto;
+    }
+    .pm__trace,
+    .pm__card {
       display: none;
+    }
+    .pm__hint {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    .pm__legend {
+      top: 1rem;
+      left: 1rem;
+    }
+    .pm__zoom {
+      top: 1rem;
+      right: 1rem;
+      bottom: auto;
+    }
+
+    .pm__strip {
+      position: relative;
+      display: flex;
+      gap: 0.75rem;
+      margin: 0;
+      padding: 0.75rem 1rem 1rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 1rem;
+      scrollbar-width: none;
+      background: var(--bg);
+      border-top: 1px solid var(--line);
+    }
+    .pm__strip li {
+      flex: 0 0 min(82%, 21rem);
+      scroll-snap-align: center;
+    }
+    .pm__strip li[hidden] {
+      display: none;
+    }
+    .scard {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      height: 100%;
+      min-height: 5.25rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--line-card);
+      border-radius: var(--radius-card);
+      color: inherit;
+      transition: border-color var(--dur) var(--ease);
+    }
+    .scard:hover {
+      color: inherit;
+    }
+    .pm__strip li.is-active .scard {
+      border-color: var(--blue);
+    }
+    .scard__img {
+      flex-shrink: 0;
+      width: 4.5rem;
+      height: 4.5rem;
+      object-fit: cover;
+      border-radius: var(--radius);
+    }
+    .scard__text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 0.375rem;
+      min-width: 0;
+    }
+    .scard__title {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      font-size: 0.9375rem;
+      line-height: 1.25;
+    }
+    .scard svg {
+      flex-shrink: 0;
+      color: var(--blue);
     }
   }
 </style>
